@@ -38,7 +38,7 @@ public class AsyncClientImpl extends AbstractWSClient {
     public interface Listener {
         void onConnectionEstablished();
         void onServerUnreachable(Exception e);
-        void onConfigParamsReceived(byte[] configParams);
+        void onConfigParamsReceived(byte[] configParams, int w, int h);
         void onStreamChunkReceived(byte[] chunk, int flags, long timestamp);
     }
 
@@ -103,6 +103,8 @@ public class AsyncClientImpl extends AbstractWSClient {
                 Object type = obj.get("type");
                 if (type.equals("config")) {
                     String sParams = obj.getString("configArray");
+                    int width = obj.getInt("width");
+                    int height = obj.getInt("height");
                     //final byte[] params = sParams.getBytes();
                     final byte[] params = Base64.decode(sParams, Base64.DEFAULT);
                     /*mMainHandler.post(new Runnable() {
@@ -112,7 +114,7 @@ public class AsyncClientImpl extends AbstractWSClient {
                         }
                     });
                     */
-                    if (mListener != null) mListener.onConfigParamsReceived(params);
+                    if (mListener != null) mListener.onConfigParamsReceived(params, width, height);
                 }
                 else if (type.equals("stream")){
                     String sChunk = obj.getString("data");

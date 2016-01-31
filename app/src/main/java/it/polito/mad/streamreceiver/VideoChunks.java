@@ -1,7 +1,5 @@
 package it.polito.mad.streamreceiver;
 
-import android.util.Log;
-
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
@@ -30,19 +28,22 @@ public class VideoChunks {
 
     public synchronized void addChunk(byte[] data, int flags, long time) {
         //if (mChunks.size() == mMaxSize){
-         //   mChunks.removeFirst();
+        //   mChunks.removeFirst();
         //}
         mChunks.addLast(new Chunk(data, flags, time));
         notifyAll();
     }
 
     public synchronized void addChunk(Chunk chunk) {
-        /*if (mChunks.size() == mMaxSize){
+        if (mChunks.size() == mMaxSize){
             mChunks.removeFirst();
-        }*/
+        }
         mChunks.addLast(chunk);
-        Log.i("chunks", mChunks.size() + " chunks");
         notifyAll();
+    }
+
+    public synchronized void clear(){
+        mChunks.clear();
     }
 
     /**
@@ -68,7 +69,6 @@ public class VideoChunks {
             }
         }
         Chunk nextChunk = mChunks.removeFirst();
-        Log.i("chunks", mChunks.size()+" chunks");
         notifyAll();
         return nextChunk;
     }
