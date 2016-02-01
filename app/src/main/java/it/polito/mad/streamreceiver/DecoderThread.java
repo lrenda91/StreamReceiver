@@ -1,6 +1,7 @@
 package it.polito.mad.streamreceiver;
 
 import android.media.MediaCodec;
+import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.os.AsyncTask;
 import android.util.Log;
@@ -68,7 +69,7 @@ public class DecoderThread extends Thread implements Runnable {
     public void run() {
         MediaCodec decoder = null;
         MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
-
+        format.setInteger(MediaFormat.KEY_ROTATION, 270);
         try{
             decoder = MediaCodec.createDecoderByType(MIME_TYPE);
             //now, we must wait for csd-0 configuration bytes by the encoder
