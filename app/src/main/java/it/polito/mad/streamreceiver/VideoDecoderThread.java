@@ -14,7 +14,7 @@ import java.nio.ByteBuffer;
  * Created by luigi on 21/01/16.
  */
 @SuppressWarnings("deprecation")
-public class DecoderThread extends Thread implements Runnable {
+public class VideoDecoderThread implements Runnable {
 
     public static abstract class Listener {
         void onEncodedDataAvailable(byte[] data){}
@@ -25,22 +25,53 @@ public class DecoderThread extends Thread implements Runnable {
 
     private static final int TIMEOUT_US = 10000;
     private static final String MIME_TYPE = "video/avc";
-    private static final int FRAME_RATE = 20;
-    private static final int I_FRAME_INTERVAL = 1;
-    private static final int BIT_RATE_BPS = 500000;
-    private static final long NUM_FRAMES = 100;
 
     private Listener mListener;
-    //private Semaphore mConfigDataReceived = new Semaphore(0);
     private ByteBuffer mConfigBuffer;
     private VideoChunks mEncodedFrames = new VideoChunks();
-    private final int mWidth, mHeight;
+    private int mWidth, mHeight, mRotation;
 
     private Surface mOutputSurface;
 
-    public DecoderThread(int w, int h, Listener listener){
-        mWidth = 640;
-        mHeight = 480;
+    private Thread mWorkerThread;
+
+    public void startThread(int w, int h, int rotation){
+        if (mWorkerThread != null){
+            return;
+        }
+        mWidth = w;
+        mHeight = h;
+        mRotation = rotation;
+        mWorkerThread = new Thread(this);
+        mWorkerThread.start();
+    }
+
+    public void requestStop(){
+        if (mWorkerThread == null){
+            return;
+        }
+        mWorkerThread.interrupt();
+    }
+
+    public boolean waitForTermination(){
+        if (mWorkerThread == null){
+            return true;
+        }
+        boolean result = true;
+        try{
+            mWorkerThread.join();
+        } catch(InterruptedException e){
+            result = false;
+        }
+        mWorkerThread = null;
+        return result;
+    }
+
+    public boolean isRunning(){
+        return mWorkerThread != null;
+    }
+
+    public VideoDecoderThread(Listener listener){
         mListener = listener;
     }
 
@@ -69,7 +100,7 @@ public class DecoderThread extends Thread implements Runnable {
     public void run() {
         MediaCodec decoder = null;
         MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
-        format.setInteger(MediaFormat.KEY_ROTATION, 270);
+        //format.setInteger(MediaFormat.KEY_ROTATION, 270);
         try{
             decoder = MediaCodec.createDecoderByType(MIME_TYPE);
             //now, we must wait for csd-0 configuration bytes by the encoder
@@ -101,13 +132,13 @@ public class DecoderThread extends Thread implements Runnable {
             mConfigBuffer.get(ppsArray, 0, ppsSize);
             ByteBuffer sps = ByteBuffer.wrap(spsArray);
             ByteBuffer pps = ByteBuffer.wrap(ppsArray);
-            //format.setByteBuffer("csd-0", mConfigBuffer);  //SPS + PPS
-            format.setByteBuffer("csd-0", sps);
-            format.setByteBuffer("csd-1", pps);
+
+            format.setByteBuffer("csd-0", sps);     //SPS
+            format.setByteBuffer("csd-1", pps);     //PPS
             byte[] b = new byte[mConfigBuffer.remaining()];
             mConfigBuffer.get(b);
 
-            Log.d(TAG, "Configured csd-0 buffer: "+mConfigBuffer.toString());
+            Log.d(TAG, "Configured SPS+PPS buffer: "+mConfigBuffer.toString());
             decoder.configure(format, mOutputSurface,  null, 0);
             decoder.start();
         }
@@ -128,19 +159,17 @@ public class DecoderThread extends Thread implements Runnable {
 
         ByteBuffer[] decoderInputBuffers = decoder.getInputBuffers();
         ByteBuffer[] decoderOutputBuffers = decoder.getOutputBuffers();
-        long counter = 0;
+        long counter = 0L;
 
-        boolean EOS_Received = false;
-        //boolean mEnd = true;
         int inputStatus = -1, outputStatus = -1;
 
         if (VERBOSE) Log.d(TAG, "Decoder starts...");
 
         while (!Thread.interrupted()){
-            //if (!EOS_Received) {
             if (VERBOSE) Log.i(TAG, "Waiting for input buffer");
             inputStatus = decoder.dequeueInputBuffer(TIMEOUT_US);
             if (inputStatus >= 0) {
+                if (VERBOSE) Log.d(TAG, "released InBuf["+inputStatus+"]");
                 ByteBuffer inputBuf = decoderInputBuffers[inputStatus];
                 inputBuf.clear();
 
@@ -153,7 +182,6 @@ public class DecoderThread extends Thread implements Runnable {
                 if (VERBOSE) Log.d(TAG, "Received byte["+chunk.data.length+"] from server");
 
                 inputBuf.put(chunk.data);
-                //EOS_Received = (chunk.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0;
                 counter++;
 
                 decoder.queueInputBuffer(inputStatus, 0, chunk.data.length,
@@ -161,7 +189,6 @@ public class DecoderThread extends Thread implements Runnable {
                 if (VERBOSE) Log.d(TAG, "queued array # " + counter + ": "
                         + chunk.data.length + " bytes to decoder");
             }
-            //}
 
             MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
             outputStatus = decoder.dequeueOutputBuffer(info, TIMEOUT_US);
@@ -180,7 +207,7 @@ public class DecoderThread extends Thread implements Runnable {
                 default:
                     if (outputStatus < 0)
                         break;
-                    Log.d(TAG, "DECODER OUTPUT AVAILABLE!!!");
+                    if (VERBOSE) Log.d(TAG, "DECODER OUTPUT AVAILABLE!!!");
                     ByteBuffer outputFrame = decoderOutputBuffers[outputStatus];
                     if (outputFrame != null) {
                         outputFrame.position(info.offset);
@@ -188,12 +215,9 @@ public class DecoderThread extends Thread implements Runnable {
                     }
                     /*byte[] decodedArray = new byte[outputFrame.remaining()];
                     outputFrame.get(decodedArray);
-                    VideoChunks.Chunk c =
-                                new VideoChunks.Chunk(decodedArray, info.flags, info.presentationTimeUs);
-                    publishProgress(c);
                     */
                     decoder.releaseOutputBuffer(outputStatus, true /*render*/);
-                    Log.d(TAG, "released with render=true");
+                    if (VERBOSE) Log.d(TAG, "released OutBuf["+outputStatus+"]");
                     break;
             }
         }

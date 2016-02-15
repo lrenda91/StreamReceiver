@@ -44,7 +44,6 @@ public class JSONMessageFactory {
         msg.put(TYPE_KEY, "config");
         String base64 = Base64.encodeToString(configData, Base64.DEFAULT);
         try {
-            //msg[data] = Buffer() in javascript
             msg.put(DATA_KEY, new String(configData));
         }
         catch(Exception e){

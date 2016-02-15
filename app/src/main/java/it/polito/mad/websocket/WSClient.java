@@ -1,7 +1,5 @@
 package it.polito.mad.websocket;
 
-import android.annotation.TargetApi;
-import android.os.Build;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -9,25 +7,18 @@ import android.util.Base64;
 import android.util.Log;
 
 import com.neovisionaries.ws.client.WebSocket;
-import com.neovisionaries.ws.client.WebSocketError;
-import com.neovisionaries.ws.client.WebSocketException;
 import com.neovisionaries.ws.client.WebSocketFactory;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.concurrent.Semaphore;
-
 import it.polito.mad.JSONMessageFactory;
-import it.polito.mad.streamreceiver.VideoChunks;
 
 /**
  * Manages a {@link WebSocket} inside a background thread
  * Created by luigi on 02/12/15.
  */
-public class AsyncClientImpl extends AbstractWSClient {
+public class WSClient extends AbstractWSClient {
 
     private static final boolean VERBOSE = true;
     private static final String TAG = "WebSocketClient";
@@ -38,13 +29,14 @@ public class AsyncClientImpl extends AbstractWSClient {
     public interface Listener {
         void onConnectionEstablished();
         void onServerUnreachable(Exception e);
-        void onConfigParamsReceived(byte[] configParams, int w, int h);
-        void onStreamChunkReceived(byte[] chunk, int flags, long timestamp);
+        void onVideoConfigParamsReceived(byte[] configParams, int w, int h);
+        void onAudioConfigParamsReceived(byte[] configParams);
+        void onStreamChunkReceived(boolean audio, byte[] chunk, int flags, long timestamp);
     }
 
     private Listener mListener;
 
-    public AsyncClientImpl(Listener listener){
+    public WSClient(Listener listener){
         mMainHandler = new Handler(Looper.getMainLooper());
         mListener = listener;
     }
@@ -57,7 +49,7 @@ public class AsyncClientImpl extends AbstractWSClient {
                 try {
                     String uri = "ws://" + serverIP + ":" + port;
                     mWebSocket = new WebSocketFactory().createSocket(uri, timeout);
-                    mWebSocket.addListener(AsyncClientImpl.this);
+                    mWebSocket.addListener(WSClient.this);
                     mWebSocket.connect();
                     if (VERBOSE) Log.d(TAG, "Successfully connected to " + uri);
                 } catch (final Exception e) {
@@ -101,35 +93,31 @@ public class AsyncClientImpl extends AbstractWSClient {
             obj = new JSONObject(text);
             if (obj.has("type")){
                 Object type = obj.get("type");
-                if (type.equals("config")) {
+                if (type.equals("config-video")) {
                     String sParams = obj.getString("configArray");
                     int width = obj.getInt("width");
                     int height = obj.getInt("height");
-                    //final byte[] params = sParams.getBytes();
                     final byte[] params = Base64.decode(sParams, Base64.DEFAULT);
-                    /*mMainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mListener != null) mListener.onConfigParamsReceived(params);
-                        }
-                    });
-                    */
-                    if (mListener != null) mListener.onConfigParamsReceived(params, width, height);
+                    if (mListener != null) mListener.onVideoConfigParamsReceived(params, width, height);
                 }
-                else if (type.equals("stream")){
+                else if (type.equals("config-audio")) {
+                    String sParams = obj.getString("audioConfig");
+                    final byte[] params = Base64.decode(sParams, Base64.DEFAULT);
+                    if (mListener != null) mListener.onAudioConfigParamsReceived(params);
+                }
+                else if (type.equals("video")){
                     String sChunk = obj.getString("data");
-                    //final byte[] chunk = sChunk.getBytes();
                     final byte[] chunk = Base64.decode(sChunk, Base64.DEFAULT);
                     final int flags = obj.getInt("flags");
                     final long timestamp = obj.getLong("ts");
-                    /*mMainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mListener != null) mListener.onStreamChunkReceived(chunk, flags, timestamp);
-                        }
-                    });
-                    */
-                    if (mListener != null) mListener.onStreamChunkReceived(chunk, flags, timestamp);
+                    if (mListener != null) mListener.onStreamChunkReceived(false, chunk, flags, timestamp);
+                }
+                else if (type.equals("audio")){
+                    String sChunk = obj.getString("data");
+                    final byte[] chunk = Base64.decode(sChunk, Base64.DEFAULT);
+                    final int flags = obj.getInt("flags");
+                    final long timestamp = obj.getLong("ts");
+                    if (mListener != null) mListener.onStreamChunkReceived(true, chunk, flags, timestamp);
                 }
             }
         }
