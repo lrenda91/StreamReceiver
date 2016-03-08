@@ -1,4 +1,4 @@
-package it.polito.mad;
+package it.polito.mad.websocket;
 
 import android.util.Base64;
 
@@ -30,6 +30,12 @@ public class JSONMessageFactory {
     private static JSONObject get() throws JSONException {
         JSONObject msg = new JSONObject();
         msg.put(RULE_KEY, RULE_VALUE);
+        return msg;
+    }
+
+    public static JSONObject createHelloMessage() throws JSONException {
+        JSONObject msg = get();
+        msg.put(TYPE_KEY, "hello");
         return msg;
     }
 

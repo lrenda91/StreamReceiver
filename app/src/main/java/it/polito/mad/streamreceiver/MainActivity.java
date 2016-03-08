@@ -19,6 +19,7 @@ public class MainActivity extends Activity {
         @Override
         public void onConnectionEstablished() {
             Toast.makeText(MainActivity.this, "Connected", Toast.LENGTH_LONG).show();
+            mClient.sendHello();
             mClient.requestConfigParams();
         }
 
