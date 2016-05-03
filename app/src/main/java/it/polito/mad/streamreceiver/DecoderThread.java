@@ -21,7 +21,7 @@ public class DecoderThread extends Thread implements Runnable {
     }
 
     private static final String TAG = "DECODER";
-    private static final boolean VERBOSE = true;
+    private static final boolean VERBOSE = false;
 
     private static final int TIMEOUT_US = 10000;
     private static final String MIME_TYPE = "video/avc";
@@ -39,8 +39,8 @@ public class DecoderThread extends Thread implements Runnable {
     private Surface mOutputSurface;
 
     public DecoderThread(int w, int h, Listener listener){
-        mWidth = 640;
-        mHeight = 480;
+        mWidth = w;
+        mHeight = h;
         mListener = listener;
     }
 
@@ -69,7 +69,7 @@ public class DecoderThread extends Thread implements Runnable {
     public void run() {
         MediaCodec decoder = null;
         MediaFormat format = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
-        format.setInteger(MediaFormat.KEY_ROTATION, 270);
+        format.setInteger(MediaFormat.KEY_ROTATION, 0);
         try{
             decoder = MediaCodec.createDecoderByType(MIME_TYPE);
             //now, we must wait for csd-0 configuration bytes by the encoder

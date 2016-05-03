@@ -16,7 +16,7 @@ import org.json.JSONObject;
  * Manages a {@link WebSocket} inside a background thread
  * Created by luigi on 02/12/15.
  */
-public class AsyncClientImpl extends AbstractWSClient {
+public class WSClientImpl extends AbstractWSClient {
 
     private static final boolean VERBOSE = true;
     private static final String TAG = "WebSocketClient";
@@ -33,7 +33,7 @@ public class AsyncClientImpl extends AbstractWSClient {
 
     private Listener mListener;
 
-    public AsyncClientImpl(Listener listener){
+    public WSClientImpl(Listener listener){
         mMainHandler = new Handler(Looper.getMainLooper());
         mListener = listener;
     }
@@ -46,7 +46,7 @@ public class AsyncClientImpl extends AbstractWSClient {
                 try {
                     String uri = "ws://" + serverIP + ":" + port;
                     mWebSocket = new WebSocketFactory().createSocket(uri, timeout);
-                    mWebSocket.addListener(AsyncClientImpl.this);
+                    mWebSocket.addListener(WSClientImpl.this);
                     mWebSocket.connect();
                     if (VERBOSE) Log.d(TAG, "Successfully connected to " + uri);
                 } catch (final Exception e) {
@@ -100,18 +100,11 @@ public class AsyncClientImpl extends AbstractWSClient {
             if (obj.has("type")){
                 Object type = obj.get("type");
                 if (type.equals("config")) {
+                    if (VERBOSE) Log.d(TAG, "Received config from server: "+text);
                     String sParams = obj.getString("configArray");
                     int width = obj.getInt("width");
                     int height = obj.getInt("height");
-                    //final byte[] params = sParams.getBytes();
                     final byte[] params = Base64.decode(sParams, Base64.DEFAULT);
-                    /*mMainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mListener != null) mListener.onConfigParamsReceived(params);
-                        }
-                    });
-                    */
                     if (mListener != null) mListener.onConfigParamsReceived(params, width, height);
                 }
                 else if (type.equals("stream")){
@@ -120,13 +113,6 @@ public class AsyncClientImpl extends AbstractWSClient {
                     final byte[] chunk = Base64.decode(sChunk, Base64.DEFAULT);
                     final int flags = obj.getInt("flags");
                     final long timestamp = obj.getLong("ts");
-                    /*mMainHandler.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (mListener != null) mListener.onStreamChunkReceived(chunk, flags, timestamp);
-                        }
-                    });
-                    */
                     if (mListener != null) mListener.onStreamChunkReceived(chunk, flags, timestamp);
                 }
             }
