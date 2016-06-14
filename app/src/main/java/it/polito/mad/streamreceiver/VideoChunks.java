@@ -16,6 +16,7 @@ public class VideoChunks {
         public final byte[] data;
         public final int flags;
         public final long presentationTimestampUs;
+        public long sn;
         public Chunk(byte[] data, int flags, long presentationTimestampUs){
             this.data = data;
             this.flags = flags;
@@ -35,9 +36,9 @@ public class VideoChunks {
     }
 
     public synchronized void addChunk(Chunk chunk) {
-        if (mChunks.size() == mMaxSize){
-            mChunks.removeFirst();
-        }
+        //if (mChunks.size() == mMaxSize){
+        //    mChunks.removeFirst();
+        //}
         mChunks.addLast(chunk);
         notifyAll();
     }

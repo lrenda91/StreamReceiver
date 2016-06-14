@@ -28,7 +28,7 @@ public class WSClientImpl extends AbstractWSClient {
         void onConnectionEstablished();
         void onServerUnreachable(Exception e);
         void onConfigParamsReceived(byte[] configParams, int w, int h);
-        void onStreamChunkReceived(byte[] chunk, int flags, long timestamp);
+        void onStreamChunkReceived(byte[] chunk, int flags, long timestamp, long sn);
     }
 
     private Listener mListener;
@@ -113,7 +113,9 @@ public class WSClientImpl extends AbstractWSClient {
                     final byte[] chunk = Base64.decode(sChunk, Base64.DEFAULT);
                     final int flags = obj.getInt("flags");
                     final long timestamp = obj.getLong("ts");
-                    if (mListener != null) mListener.onStreamChunkReceived(chunk, flags, timestamp);
+                    long sn = obj.getLong("num");
+                    //Log.d(TAG, "SOCKET seq # received: -> "+sn);
+                    if (mListener != null) mListener.onStreamChunkReceived(chunk, flags, timestamp, sn);
                 }
             }
         }

@@ -52,9 +52,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void onStreamChunkReceived(byte[] chunk, int flags, long timestamp) {
-            Log.d("ACT", "stream["+chunk.length+"]");
-            mDecoderTask.submitEncodedData(new VideoChunks.Chunk(chunk, flags, timestamp));
+        public void onStreamChunkReceived(byte[] chunk, int flags, long timestamp, long sn) {
+            //Log.d("ACT", "stream["+chunk.length+"]");
+            VideoChunks.Chunk c = new VideoChunks.Chunk(chunk, flags, timestamp);
+            c.sn = sn;
+            mDecoderTask.submitEncodedData(c);
         }
     });
 
@@ -90,16 +92,16 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
-        outputView.post(new Runnable() {
-            @Override
-            public void run() {
-                //int w = surfaceView.getMeasuredWidth();
-                int measuredHeight = outputView.getMeasuredHeight();
-                ViewGroup.LayoutParams lp = outputView.getLayoutParams();
-                lp.width = measuredHeight * 3 / 4;
-                outputView.setLayoutParams(lp);
-            }
-        });
+//        outputView.post(new Runnable() {
+//            @Override
+//            public void run() {
+//                //int w = surfaceView.getMeasuredWidth();
+//                int measuredHeight = outputView.getMeasuredHeight();
+//                ViewGroup.LayoutParams lp = outputView.getLayoutParams();
+//                lp.width = measuredHeight * 4 / 3;
+//                outputView.setLayoutParams(lp);
+//            }
+//        });
 
         findViewById(R.id.connect_button).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -118,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
                 //int w = surfaceView.getMeasuredWidth();
                 int measuredHeight = outputView.getMeasuredHeight();
                 ViewGroup.LayoutParams lp = outputView.getLayoutParams();
-                lp.width = measuredHeight * 3 / 4;
+                lp.width = measuredHeight * 4 / 3;
                 outputView.setLayoutParams(lp);
             }
         });

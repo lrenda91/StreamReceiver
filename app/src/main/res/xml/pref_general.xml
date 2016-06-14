@@ -3,7 +3,7 @@
     <EditTextPreference
         android:capitalize="words"
         android:defaultValue="@string/pref_server_ip_default_value"
-        android:inputType="text"
+        android:inputType="text|number"
         android:key="@string/pref_key_server_ip"
         android:maxLines="1"
         android:selectAllOnFocus="true"
